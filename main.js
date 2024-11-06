@@ -9,31 +9,39 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setAnimationLoop(animate);
 document.body.appendChild(renderer.domElement);
 
-let mixer;
-const clock = new THREE.Clock(); // For calculating delta time
+let cubeMixer, sphereMixer; // Separate mixers for the cube and sphere
+const clock = new THREE.Clock(); // For delta time calculation
 
 // Load the GLB model
 const loader = new GLTFLoader();
 loader.load(
-  'public/blenderthreeanimated.glb',
+  'public/blenderthreeanimated2.glb',
   (gltf) => {
     const model = gltf.scene;
     scene.add(model);
 
-    // Find the cube object by name
+    // Find the cube and sphere objects by name
     const cube = model.getObjectByName('Cube');
+    const sphere = model.getObjectByName('Sphere');
 
-    // Get the animation clip from the GLTF data
-    const animationClip = gltf.animations[0];
+    // Check if the animations exist and set up the mixers
+    if (cube && gltf.animations.length > 0) {
+      cubeMixer = new THREE.AnimationMixer(cube);
+      const cubeClip = gltf.animations.find((clip) => clip.name === 'CubeAction'); // Replace with the correct name
+      if (cubeClip) {
+        const cubeAction = cubeMixer.clipAction(cubeClip);
+        cubeAction.play();
+      }
+    }
 
-    // Create a mixer to play the animation
-    mixer = new THREE.AnimationMixer(cube);
-    const action = mixer.clipAction(animationClip);
-    action.play();
-
-    // Store the mixer and clip on the cube's userData
-    cube.userData.mixer = mixer;
-    cube.userData.clip = animationClip;
+    if (sphere && gltf.animations.length > 0) {
+      sphereMixer = new THREE.AnimationMixer(sphere);
+      const sphereClip = gltf.animations.find((clip) => clip.name === 'SphereAction'); // Replace with the correct name
+      if (sphereClip) {
+        const sphereAction = sphereMixer.clipAction(sphereClip);
+        sphereAction.play();
+      }
+    }
 
     // Add lighting to the scene
     const ambientLight = new THREE.AmbientLight(0x404040);
@@ -43,7 +51,9 @@ loader.load(
     directionalLight.position.set(0, 1, 1);
     scene.add(directionalLight);
 
-    camera.position.z = 5;
+    camera.position.set(3, 1, 5); // Adjust x, y, z as needed
+    camera.lookAt(scene.position);
+
   },
   (progress) => {
     console.log(`Loading file: ${(progress.loaded / progress.total * 100)}% loaded`);
@@ -53,22 +63,34 @@ loader.load(
   }
 );
 
-// Get the slider element and add an event listener to control animation speed
-const speedSlider = document.getElementById('animation-speed');
-speedSlider.addEventListener('input', (event) => {
+// Get the sliders and add event listeners to control animation speed
+const cubeSpeedSlider = document.getElementById('cube-animation-speed');
+const sphereSpeedSlider = document.getElementById('sphere-animation-speed');
+
+cubeSpeedSlider.addEventListener('input', (event) => {
   const speed = parseFloat(event.target.value);
-  if (mixer) {
-    mixer.timeScale = speed;
+  if (cubeMixer) {
+    cubeMixer.timeScale = speed;
+  }
+});
+
+sphereSpeedSlider.addEventListener('input', (event) => {
+  const speed = parseFloat(event.target.value);
+  if (sphereMixer) {
+    sphereMixer.timeScale = speed;
   }
 });
 
 function animate() {
-  // Calculate the delta time between frames
+  // Calculate delta time for consistent animations
   const deltaTime = clock.getDelta();
 
-  // Update the animation mixer with delta time
-  if (mixer) {
-    mixer.update(deltaTime);
+  // Update the mixers
+  if (cubeMixer) {
+    cubeMixer.update(deltaTime);
+  }
+  if (sphereMixer) {
+    sphereMixer.update(deltaTime);
   }
 
   renderer.render(scene, camera);
