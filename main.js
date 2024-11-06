@@ -9,41 +9,31 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setAnimationLoop(animate);
 document.body.appendChild(renderer.domElement);
 
+let mixer;
+const clock = new THREE.Clock(); // For calculating delta time
+
 // Load the GLB model
 const loader = new GLTFLoader();
 loader.load(
-  'public/blenderthree.glb',
+  'public/blenderthreeanimated.glb',
   (gltf) => {
     const model = gltf.scene;
     scene.add(model);
 
-    // Find the cube and sphere objects by name
+    // Find the cube object by name
     const cube = model.getObjectByName('Cube');
-    const sphere = model.getObjectByName('Sphere');
 
-    // Wait for the DOM elements to be available
-    setTimeout(() => {
-      // Create UI sliders
-      const cubeXSlider = document.getElementById('cube-x');
-      const cubeScaleSlider = document.getElementById('cube-scale');
-      const sphereXSlider = document.getElementById('sphere-x');
-      const sphereScaleSlider = document.getElementById('sphere-scale');
+    // Get the animation clip from the GLTF data
+    const animationClip = gltf.animations[0];
 
-      // Update the scene based on slider values
-      function updateScene() {
-        cube.position.x = cubeXSlider.value;
-        cube.scale.set(cubeScaleSlider.value, cubeScaleSlider.value, cubeScaleSlider.value);
+    // Create a mixer to play the animation
+    mixer = new THREE.AnimationMixer(cube);
+    const action = mixer.clipAction(animationClip);
+    action.play();
 
-        sphere.position.x = sphereXSlider.value;
-        sphere.scale.set(sphereScaleSlider.value, sphereScaleSlider.value, sphereScaleSlider.value);
-      }
-
-      // Attach event listeners to the sliders
-      cubeXSlider.addEventListener('input', updateScene);
-      cubeScaleSlider.addEventListener('input', updateScene);
-      sphereXSlider.addEventListener('input', updateScene);
-      sphereScaleSlider.addEventListener('input', updateScene);
-    }, 100);
+    // Store the mixer and clip on the cube's userData
+    cube.userData.mixer = mixer;
+    cube.userData.clip = animationClip;
 
     // Add lighting to the scene
     const ambientLight = new THREE.AmbientLight(0x404040);
@@ -63,6 +53,23 @@ loader.load(
   }
 );
 
+// Get the slider element and add an event listener to control animation speed
+const speedSlider = document.getElementById('animation-speed');
+speedSlider.addEventListener('input', (event) => {
+  const speed = parseFloat(event.target.value);
+  if (mixer) {
+    mixer.timeScale = speed;
+  }
+});
+
 function animate() {
+  // Calculate the delta time between frames
+  const deltaTime = clock.getDelta();
+
+  // Update the animation mixer with delta time
+  if (mixer) {
+    mixer.update(deltaTime);
+  }
+
   renderer.render(scene, camera);
 }
