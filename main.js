@@ -12,6 +12,8 @@ document.body.appendChild(renderer.domElement);
 let cubeMixer, sphereMixer; // Separate mixers for the cube and sphere
 const clock = new THREE.Clock(); // For delta time calculation
 
+let cubeTexture;
+
 // Load the GLB model
 const loader = new GLTFLoader();
 loader.load(
@@ -43,6 +45,17 @@ loader.load(
       }
     }
 
+    model.traverse(function(node) {
+      if (node.isMesh && node.name === 'Cube') {
+          const textureLoader = new THREE.TextureLoader();
+          textureLoader.load('public/pattern.jpg', function(texture) {
+              node.material.map = texture;
+              node.material.needsUpdate = true;
+              cubeTexture = texture;
+          });
+      }
+  });
+
     // Add lighting to the scene
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
@@ -66,6 +79,7 @@ loader.load(
 // Get the sliders and add event listeners to control animation speed
 const cubeSpeedSlider = document.getElementById('cube-animation-speed');
 const sphereSpeedSlider = document.getElementById('sphere-animation-speed');
+const cubeTextureSlider = document.getElementById('cube-texture');
 
 cubeSpeedSlider.addEventListener('input', (event) => {
   const speed = parseFloat(event.target.value);
@@ -78,6 +92,14 @@ sphereSpeedSlider.addEventListener('input', (event) => {
   const speed = parseFloat(event.target.value);
   if (sphereMixer) {
     sphereMixer.timeScale = speed;
+  }
+});
+
+cubeTextureSlider.addEventListener('input', (event) => {
+  const texture = parseFloat(event.target.value);
+  if (cubeMixer) {
+    cubeTexture.repeat.set(texture, texture);
+    cubeTexture.needsUpdate = true;
   }
 });
 
